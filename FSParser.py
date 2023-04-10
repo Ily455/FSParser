@@ -1,12 +1,11 @@
 #importing libraries
 import binascii
-import argparse
 import os
-from banner import *
 from datetime import datetime
 
-
+#variable to store the sector size, change it if you want to parse a different sector size
 SECTOR_SIZE = 512
+
 # variable to keep track of existing filesystems
 existingFS=[]
 
@@ -35,6 +34,7 @@ sectionToParseElements=[['00', '3', 'Jump instruction'],
  ['47', '11', 'Volume label'],
  ['1E8', '4', 'Number of Free Clusters'],
  ['1FE', '2', 'Boot sector signature']]
+
 #elements of the ext superblock
 superBlockElements = [  ['00', '4', 'Inode count'],
   ['04', '4', 'Block count'],
@@ -62,8 +62,9 @@ superBlockElements = [  ['00', '4', 'Inode count'],
   ['50', '2', 'Default UID for reserved blocks'],
   ['52', '2', 'Default GID for reserved blocks']]
 
-
-
+################################################
+#############  FUNCTIONS  ######################
+################################################
 
 #function to check if a partition is bootable
 def is_bootable(value):
@@ -206,9 +207,6 @@ def splitPartitions():
     partitions=[part1,part2,part3,part4,btsig]
     return partitions
 
-
-############################################################
-
 #this function converts little endian to big endian, creds to dkuers on stackoverflow
 def lil2BigE(value):
     bytes_data = bytes.fromhex(value)
@@ -216,12 +214,7 @@ def lil2BigE(value):
     s=hex(s).replace('0x','')
     return s
 
-
-
-#################################################################
-
 #functions to format the output
-
 def a(bytevalue):#convert2dec
     dec=int(lil2BigE(bytevalue.decode('utf-8')),16)
     return dec 
@@ -239,16 +232,13 @@ def d(bytevalue):#media descriptor
     else:
         medDesc=c(bytevalue)
     return medDesc
-#function to format the parsed fields put in a single array 
 functions=[c,b,a,a,a,a,a,a,d,a,a,a,a,a,a,a,a,a,a,c,c,b,a,c]
 
-
-#printing the result
+#printing the result of the parsing of the FAT32 section
 def printFAT32(sectionToParse):
     for element in sectionToParseElements:
         print(f"-{element[2]} : {functions[sectionToParseElements.index(element)](sectionToParse[int(element[0],base=16)*2:int(element[0],base=16)*2+int(element[1])*2])}")
 
-####################################################################
 #check if first block of ext is empty or not
 def checkExt(fsContent):
     if fsContent[0:16]==b'0000000000000000':
@@ -261,104 +251,74 @@ def checkExt(fsContent):
         superBlock=fsContent[0:0+blocsize*2]
     return superBlock
 
-
-
-#functions to format the parsed fields
+#functions to format the parsed fields of the ext superblock
 def Inode_count(value): #size 32
 	bytes_data = bytes.fromhex(value)
 	inode_count = int.from_bytes(bytes_data, byteorder='little')
 	return inode_count
-
-
 def Block_count(value): #size 32
     bytes_data = bytes.fromhex(value)
     block_count = int.from_bytes(bytes_data, byteorder='little')
     return block_count
-
-
 def Su_block(value): #size 32
 	bytes_data = bytes.fromhex(value)
 	su_value = int.from_bytes(bytes_data, byteorder='little')
 	return su_value
-
-
 def Free_block(value):
     bytes_data = bytes.fromhex(value)
     free_block = int.from_bytes(bytes_data, byteorder='little')
     return free_block
-
-
 def Free_inode(value):
     bytes_data = bytes.fromhex(value)
     free_inode = int.from_bytes(bytes_data, byteorder='little')
     return free_inode 
-
 def First_data_block(value): #Where group0 start
 	bytes_data = bytes.fromhex(value)
 	first_data_block = int.from_bytes(bytes_data, byteorder='little')
 	return first_data_block
-
 def Block_size(value):
     bytes_data = bytes.fromhex(value)
     power = int.from_bytes(bytes_data, byteorder='little')
     block_size = 2**(10+power)
     return block_size
-
-
 def Cluster_size(value):
 	bytes_data = bytes.fromhex(value)
 	power = int.from_bytes(bytes_data, byteorder='little')
 	cluster_size = 10**power
 	return cluster_size
-
-
 def Block_per_group(value):
 	bytes_data = bytes.fromhex(value)
 	block_per_group = int.from_bytes(bytes_data, byteorder='little')
 	return block_per_group
-
-
 def Cluster_per_group(value):
 	bytes_data = bytes.fromhex(value)
 	cluster_per_group = int.from_bytes(bytes_data, byteorder='little')
 	return cluster_per_group
-
-
 def Inode_per_group(value):
 	bytes_data = bytes.fromhex(value)
 	inode_per_group = int.from_bytes(bytes_data, byteorder='little')
 	return inode_per_group
-
-
 def Mount_time(value):
 	bytes_data = bytes.fromhex(value)
 	mount_time = int.from_bytes(bytes_data, byteorder='little')
 	mount_time = datetime.fromtimestamp(mount_time).strftime("%A, %B %d, %Y %I:%M:%S")
 	return mount_time
-
-
 def Write_time(value):
 	bytes_data = bytes.fromhex(value)
 	write_time = int.from_bytes(bytes_data, byteorder='little')
 	write_time = datetime.fromtimestamp(write_time).strftime("%A, %B %d, %Y %I:%M:%S")
 	return write_time
-
-
 def Number_of_mount(value):
 	bytes_data = bytes.fromhex(value)
 	number_of_mount = int.from_bytes(bytes_data, byteorder='little')
 	return number_of_mount
-
 def Max_mount_count(value):	#added
 	bytes_data = bytes.fromhex(value)
 	max_mount_count = int.from_bytes(bytes_data, byteorder='little')
 	return max_mount_count
-
-
 def Magic_signature(value):
 	value=lil2BigE(value)
 	return value
-
 def FS_state(value):
 	bytes_data = bytes.fromhex(value)
 	value = int.from_bytes(bytes_data, byteorder='little')
@@ -372,8 +332,6 @@ def FS_state(value):
 	else:
 		state= 'Unknown state'
 	return state
-
-
 def S_errors(value):	#added
 	behaviour=''
 	bytes_data = bytes.fromhex(value)
@@ -385,28 +343,19 @@ def S_errors(value):	#added
 	elif value == 3:
 		behaviour = 'Panic'
 	return behaviour
-
-
 def Minor_rev_level(value):	#added
 	bytes_data = bytes.fromhex(value)
 	minor_rev_level = int.from_bytes(bytes_data, byteorder='little')
 	return minor_rev_level
-
-
 def Last_time_check(value): #added
 	bytes_data = bytes.fromhex(value)
 	last_time_check = int.from_bytes(bytes_data, byteorder='little')
 	last_time_check = datetime.fromtimestamp(last_time_check).strftime("%A, %B %d, %Y %I:%M:%S")
 	return last_time_check
-
-
 def Check_interval(value):	#added
 	bytes_data = bytes.fromhex(value)
 	check_interval = int.from_bytes(bytes_data, byteorder='little')
 	return check_interval
-
-	
-	
 def Creator_OS(value):
 	creator=''
 	bytes_data = bytes.fromhex(value)
@@ -422,9 +371,6 @@ def Creator_OS(value):
 	elif value == 4:
 		creator = 'Lites'
 	return creator
-
-
-
 def Revision_level(value):
 	bytes_data = bytes.fromhex(value)
 	value = int.from_bytes(bytes_data, byteorder='little')
@@ -435,18 +381,14 @@ def Revision_level(value):
 	else:
 		level = 'Unknown'
 	return level
-
-
 def Default_uid(value):
 	bytes_data = bytes.fromhex(value)
 	default_uid = int.from_bytes(bytes_data, byteorder='little')
 	return default_uid
-
 def Default_gid(value):
 	bytes_data = bytes.fromhex(value)
 	default_gid = int.from_bytes(bytes_data, byteorder='little')
 	return default_gid
-
 
 #function to parse the superblock
 def SB_split(sBlock): #superblock == list dyal bytes li extr.decode('utf-8')actiti
@@ -479,7 +421,6 @@ def SB_split(sBlock): #superblock == list dyal bytes li extr.decode('utf-8')acti
 		fields = [s_inodes_count,s_blocks_count_lo,s_r_blocks_count_lo,s_free_blocks_count_lo,s_free_inodes_count,s_first_data_block,s_log_block_size,s_log_cluster_size,s_blocks_per_group,s_clusters_per_group,s_inodes_per_group,s_mtime,s_wtime,s_mnt_count,s_max_mnt_count,s_magic,s_state,s_errors,s_minor_rev_level,s_lastcheck,s_checkinterval,s_creator_os,s_rev_level,s_def_resuid,s_def_resgid]
 		return fields
 
-
 #function puts all the fields in a single array
 def Parser(content):
 	fields=SB_split(content)
@@ -510,16 +451,12 @@ def Parser(content):
 	Default_gid(fields[24])]
 	return result
 
-
-
-
 #printing the result
 def printEXT(fsContent):
     superBlock=checkExt(fsContent)
     for element in superBlockElements:
 	    print(f"-{element[2]} : {Parser(superBlock)[superBlockElements.index(element)]}")
 
-#####################################################
 #function to print the results
 def printResult(what):
     if what == 'mbr':
@@ -570,13 +507,15 @@ def printResult(what):
                     print(f"\n[+]Parsing the filesystem from partition {existingFS.index(type)+1}.")
                     if type==supported[4]:
                         LBA=prettifyInfos(parsePartition(splitPartitions()[existingFS.index(type)]))[4]
-                        numSectors=prettifyInfos(parsePartition(splitPartitions()[existingFS.index(type)]))[5][0]
+                        numSectors=10
+                        #exnumSectors=prettifyInfos(parsePartition(splitPartitions()[existingFS.index(type)]))[5]
                         fsContent=readFroma2b(calStartAddr(LBA), calEndAddr(LBA, numSectors))
                         printEXT(fsContent)
 
                     elif type in supported[0:4]:
                         LBA=prettifyInfos(parsePartition(splitPartitions()[existingFS.index(type)]))[4]
-                        numSectors=prettifyInfos(parsePartition(splitPartitions()[existingFS.index(type)]))[5][0]
+                        numSectors=10
+                        #exnumSectors=prettifyInfos(parsePartition(splitPartitions()[existingFS.index(type)]))[5]
                         fsContent=readFroma2b(calStartAddr(LBA), calEndAddr(LBA, numSectors))
                         printFAT32(fsContent[0:1024])
                     break
@@ -594,10 +533,18 @@ def calEndAddr(startAddr, numOfSec):
     B=str(hex(numOfSec*SECTOR_SIZE+startAddr*SECTOR_SIZE)).replace('0x', '')
     return B
 
+############################################
+################# BANNER ###################
+############################################
+from banner import *
 
-
-#Banner
 print_banner()
+
+############################################
+################# ARGPARSE #################
+############################################
+import argparse
+
 # Create an argument parser
 parser = argparse.ArgumentParser(description='Parse MBR partitions and filesystems.')
 
@@ -630,7 +577,6 @@ if (args.mbr or args.filesystem) and not args.image:
 if args.image:
     filename = args.image
     filename.replace('\\','/')
-
 
 if args.all or args.mbr:
     # Parse the MBR partition table
