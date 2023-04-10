@@ -5,10 +5,6 @@ import os
 from banner import *
 from datetime import datetime
 
-#reading file
-filename=r"C:\Users\ily455\Desktop\fat32sample" #fat32sample
-# filename=r"C:\Users\ily455\Desktop\SICS\2\S4\forensics\tp\1-2\deviceImageCorrupted.raw" #ext4sample
-filename.replace('\\','/')
 
 SECTOR_SIZE = 512
 # variable to keep track of existing filesystems
@@ -360,9 +356,8 @@ def Max_mount_count(value):	#added
 
 
 def Magic_signature(value):
-	bytes_data = bytes.fromhex(value)
-	magic_signature = int.from_bytes(bytes_data, byteorder='little')
-	return magic_signature
+	value=lil2BigE(value)
+	return value
 
 def FS_state(value):
 	bytes_data = bytes.fromhex(value)
